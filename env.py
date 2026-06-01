@@ -1,19 +1,12 @@
-"""
-Your benchmark logic — implement reset() and step().
-
-Required: reset(), step()
-Optional: parse_action(), close(), render()
-
-parse_action(action) — override when your step() needs a different
-representation than the JSON Schema you declare in benchanything.json.
-The platform always delivers what the schema describes; use parse_action
-to remap it before step() sees it.  Default is an identity (no-op).
-"""
 import asyncio
 import threading
 from poke_env.player import Player, RandomPlayer
-from poke_env import LocalhostServerConfiguration
+from poke_env import ServerConfiguration
 
+SHOWDOWN_SERVER = ServerConfiguration(
+    "sim3.psim.us",
+    "https://play.pokemonshowdown.com/action.php"
+)
 
 class LLMPlayer(Player):
     def __init__(self, *args, **kwargs):
@@ -46,15 +39,14 @@ class LLMPlayer(Player):
         self._pending_action = action
         self._action_event.set()
 
-
 class ShowdownEnv:
     def __init__(self):
         self.player = LLMPlayer(
-            server_configuration=LocalhostServerConfiguration,
+            server_configuration=SHOWDOWN_SERVER,
             battle_format="gen9randombattle"
         )
         self.opponent = RandomPlayer(
-            server_configuration=LocalhostServerConfiguration,
+            server_configuration=SHOWDOWN_SERVER,
             battle_format="gen9randombattle"
         )
         self._loop = asyncio.new_event_loop()
@@ -69,8 +61,10 @@ class ShowdownEnv:
             self.player.battle_against(self.opponent, n_battles=1),
             self._loop
         )
-        # Wait up to 30s for first state
-        got_state = self.player._state_event.wait(timeout=30)
+        got_state = self.player._state_event.wait(timeout=60)
+        if not got_state:
+            print("WARNING: timed out waiting for battle state")
+        return self.player.current_battle_state
 
     def step(self, action_id):
         self.player._state_event.clear()
