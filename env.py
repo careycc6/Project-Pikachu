@@ -1,7 +1,45 @@
 import asyncio
 import threading
 from poke_env.player import Player, RandomPlayer
-from poke_env import LocalhostServerConfiguration
+from poke_env import ServerConfiguration
+
+SHOWDOWN_SERVER = ServerConfiguration(
+    "sim3.psim.us",
+    "https://play.pokemonshowdown.com/action.php"
+)
+
+class ShowdownEnv:
+    def __init__(self):
+        self.player = LLMPlayer(
+            server_configuration=SHOWDOWN_SERVER,
+            battle_format="gen9randombattle"
+        )
+        self.opponent = RandomPlayer(
+            server_configuration=SHOWDOWN_SERVER,
+            battle_format="gen9randombattle"
+        )
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
+        self._thread.start()
+        self._battle_future = None
+
+    def reset(self, seed=None):
+        self.player.current_battle_state = None
+        self.player._state_event.clear()
+        self._battle_future = asyncio.run_coroutine_threadsafe(
+            self.player.battle_against(self.opponent, n_battles=1),
+            self._loop
+        )
+        self.player._state_event.wait(timeout=60)
+        return self.player.current_battle_state
+
+    def step(self, action_id):
+        self.player._state_event.clear()
+        self.player.set_action(action_id)
+        self.player._state_event.wait(timeout=30)
+        done = self._battle_future.done()
+        reward = 1.0 if (done and self.player.n_won_battles > 0) else 0.0
+        return self.player.current_battle_state, reward, done
 
 
 class LLMPlayer(Player):
@@ -34,37 +72,3 @@ class LLMPlayer(Player):
     def set_action(self, action):
         self._pending_action = action
         self._action_event.set()
-
-
-class ShowdownEnv:
-    def __init__(self):
-        self.player = LLMPlayer(
-            server_configuration=LocalhostServerConfiguration,
-            battle_format="gen9randombattle"
-        )
-        self.opponent = RandomPlayer(
-            server_configuration=LocalhostServerConfiguration,
-            battle_format="gen9randombattle"
-        )
-        self._loop = asyncio.new_event_loop()
-        self._thread = threading.Thread(target=self._loop.run_forever, daemon=True)
-        self._thread.start()
-        self._battle_future = None
-
-    def reset(self, seed=None):
-        self.player.current_battle_state = None
-        self.player._state_event.clear()
-        self._battle_future = asyncio.run_coroutine_threadsafe(
-            self.player.battle_against(self.opponent, n_battles=1),
-            self._loop
-        )
-        self.player._state_event.wait(timeout=60)
-        return self.player.current_battle_state
-
-    def step(self, action_id):
-        self.player._state_event.clear()
-        self.player.set_action(action_id)
-        self.player._state_event.wait(timeout=30)
-        done = self._battle_future.done()
-        reward = 1.0 if (done and self.player.n_won_battles > 0) else 0.0
-        return self.player.current_battle_state, reward, done
