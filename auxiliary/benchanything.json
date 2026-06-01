@@ -1,0 +1,10 @@
+{
+  "domain_id": "pokemon-showdown-gen9",
+  "vow_version": "1.0.0",
+  "description": "AI agent plays Gen 9 Random Battles on Pokemon Showdown",
+  "binding_vow": "You are a competitive Pokemon trainer playing a Gen 9 Random Battle. Each turn you will receive the current battle state as JSON. Respond with either a move index (1-4) or 'switch:POKEMON_NAME'. Choose the strategically optimal action.",
+  "scoring": {
+    "metric": "win_rate",
+    "max_score": 1.0
+  }
+}
