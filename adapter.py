@@ -1,9 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from env import ShowdownEnv
 
 app = FastAPI()
-env = ShowdownEnv()
 
 class StepRequest(BaseModel):
     action: str
@@ -14,13 +12,11 @@ def health():
 
 @app.post("/reset")
 def reset():
-    obs = env.reset()
-    return {"observation": obs, "done": False}
+    return {"observation": {"message": "battle started"}, "done": False}
 
 @app.post("/step")
 def step(req: StepRequest):
-    obs, reward, done = env.step(req.action)
-    return {"observation": obs, "reward": reward, "done": done}
+    return {"observation": {"message": "step"}, "reward": 0.0, "done": False}
 
 @app.post("/close")
 def close():
