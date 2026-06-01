@@ -7,4 +7,4 @@
 # Do not list bench_common / mesocosm here — the CLI wheel (local) and the
 # sandbox image (cloud) already provide bench_common, fastapi, uvicorn, httpx,
 # and pydantic for adapter.py.
-poke-env
+poke-env==0.15.0==0.8.3
