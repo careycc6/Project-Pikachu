@@ -1,23 +1,21 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+"""
+HTTP adapter - exposes your env via the BenchAnything four-endpoint protocol.
 
-app = FastAPI()
+Local dev:
+    python adapter.py
+    python adapter.py --port 9000
+"""
 
-class StepRequest(BaseModel):
-    action: str
+import argparse
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+from bench_common.env_sdk import serve
+from env import ShowdownEnv
 
-@app.post("/reset")
-def reset():
-    return {"observation": {"message": "battle started"}, "done": False}
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--port", type=int, default=8765)
+    args = parser.parse_args()
 
-@app.post("/step")
-def step(req: StepRequest):
-    return {"observation": {"message": "step"}, "reward": 0.0, "done": False}
-
-@app.post("/close")
-def close():
-    return {"status": "closed"}
+    print(f"ShowdownEnv adapter -> http://{args.host}:{args.port}")
+    serve(ShowdownEnv, host=args.host, port=args.port)
